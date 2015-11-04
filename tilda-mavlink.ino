@@ -5,6 +5,12 @@
 // D19 = Yellow wire to Radio Dongle (Marked TX on diagram)
 // D18 = Blue wire to Radio Dongle (Marked RX on diagram)
 
+#include <SPI.h>
+#include <glcd.h>
+#include <fonts/allFonts.h>
+#define LCD_POWER (40u)
+#define LCD_BACKLIGHT (35u)
+
 #include "C:\Users\jamesp\Documents\Arduino\libraries\mavlink\common\mavlink.h"        // Mavlink interface
 
 void setup() {
@@ -13,6 +19,17 @@ void setup() {
     ; // wait for serial port to connect. Needed for native USB
   }
   SerialUSB.println("USB Serial Console Opened");
+  SerialUSB.println("Turning on LCD...");
+  pinMode(LCD_POWER, OUTPUT);
+  digitalWrite(LCD_POWER, LOW);
+  //Turn Backlight On
+  pinMode(LCD_BACKLIGHT, OUTPUT);
+  digitalWrite(LCD_BACKLIGHT, HIGH);
+  //Init LCD
+  GLCD.Init(NON_INVERTED); 
+  GLCD.SelectFont(System5x7);
+  GLCD.print("LCD is ALIVE!");
+  GLCD.display();
   SerialUSB.println("Opening Radio Dongle");
   Serial1.begin(57600);
 }
@@ -46,7 +63,7 @@ void comm_receive() {
           mavlink_msg_heartbeat_decode(&msg, &hb);
 
           char debugStr[100];
-          sprintf(debugStr, "HEARTBEAT: AP %x BM: %x SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
+          sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
           
           SerialUSB.println(debugStr);
           
