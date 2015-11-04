@@ -14,10 +14,12 @@
 #include "C:\Users\jamesp\Documents\Arduino\libraries\mavlink\common\mavlink.h"        // Mavlink interface
 
 void setup() {
-  SerialUSB.begin(57600);    
-  while (!SerialUSB) {
-    ; // wait for serial port to connect. Needed for native USB
-  }
+  SerialUSB.begin(57600);
+  delay(3000); 
+  //while (!SerialUSB) {
+  //  ; // wait for serial port to connect. Needed for native USB.
+  // TODO: Enhance this to give up after a few seconds! We won't always have USB.
+  //}
   SerialUSB.println("USB Serial Console Opened");
   SerialUSB.println("Turning on LCD...");
   pinMode(LCD_POWER, OUTPUT);
@@ -28,7 +30,7 @@ void setup() {
   //Init LCD
   GLCD.Init(NON_INVERTED); 
   GLCD.SelectFont(System5x7);
-  GLCD.print("LCD is ALIVE!");
+  GLCD.print("MavLink Decode v0.1");
   GLCD.display();
   SerialUSB.println("Opening Radio Dongle");
   Serial1.begin(57600);
@@ -57,17 +59,22 @@ void comm_receive() {
         case MAVLINK_MSG_ID_VFR_HUD:
           SerialUSB.print("Got a HUD message! Alt=");
           SerialUSB.println(mavlink_msg_vfr_hud_get_alt(&msg));
+          GLCD.CursorTo(0, 1);
+          GLCD.print("Alt: ");
+          GLCD.CursorTo(6, 1);
+          GLCD.print(mavlink_msg_vfr_hud_get_alt(&msg));
+          GLCD.display();
           break;
+          
         case MAVLINK_MSG_ID_HEARTBEAT:
           mavlink_heartbeat_t hb;
           mavlink_msg_heartbeat_decode(&msg, &hb);
 
           char debugStr[100];
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
-          
           SerialUSB.println(debugStr);
-          
           break;
+          
         default:
          // Serial.println("Unknown msg");
           break;
