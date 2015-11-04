@@ -14,7 +14,6 @@ void setup() {
   }
   SerialUSB.println("USB Serial Console Opened");
   SerialUSB.println("Opening Radio Dongle");
-  //radioDongle.begin(57600); 
   Serial1.begin(57600);
 }
 
@@ -31,13 +30,11 @@ void comm_receive() {
   {
     // Serial.println("reading message");
     uint8_t c = Serial1.read();
-   //SerialUSB.print(c,HEX);
-   //SerialUSB.print(" ");
+    //SerialUSB.print(c,HEX);
+    //SerialUSB.print(" ");
     // Try to get a new message
     if(mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status)) {
-      // Handle message
-   //SerialUSB.println("END");
-      // Serial.print(msg.msgid);
+      //SerialUSB.println("END");
       switch(msg.msgid)
       {
         case MAVLINK_MSG_ID_VFR_HUD:
@@ -47,7 +44,11 @@ void comm_receive() {
         case MAVLINK_MSG_ID_HEARTBEAT:
           mavlink_heartbeat_t hb;
           mavlink_msg_heartbeat_decode(&msg, &hb);
-          SerialUSB.println("HEARTBEAT");
+
+          char debugStr[100];
+          sprintf(debugStr, "HEARTBEAT: AP %x BM: %x SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
+          
+          SerialUSB.println(debugStr);
           
           break;
         default:
