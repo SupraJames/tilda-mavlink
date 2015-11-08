@@ -36,6 +36,9 @@ void setup() {
   pinMode(LED1_RED, OUTPUT);
   pinMode(LED1_GREEN, OUTPUT);
   pinMode(LED1_BLUE, OUTPUT); 
+  pinMode(LED2_RED, OUTPUT);
+  pinMode(LED2_GREEN, OUTPUT);
+  pinMode(LED2_BLUE, OUTPUT); 
   SerialUSB.begin(57600);
   delay(3000); 
   //while (!SerialUSB) {
@@ -47,8 +50,8 @@ void setup() {
   pinMode(LCD_POWER, OUTPUT);
   digitalWrite(LCD_POWER, LOW);
   //Turn Backlight On
-  pinMode(LCD_BACKLIGHT, OUTPUT);
-  digitalWrite(LCD_BACKLIGHT, HIGH);
+  //pinMode(LCD_BACKLIGHT, OUTPUT);
+  //digitalWrite(LCD_BACKLIGHT, HIGH);
   //Init LCD
   GLCD.Init(NON_INVERTED); 
   GLCD.SelectFont(System5x7);
@@ -128,11 +131,22 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           GLCD.print(debugStr);
           GLCD.display();
           break;
+
+        case MAVLINK_MSG_ID_SYS_STATUS:
+          float volts;
+          volts = (float) mavlink_msg_sys_status_get_voltage_battery(msg) / 1000;
+          //uint16_t mv;
+          //mv = mavlink_msg_sys_status_get_voltage_battery(msg);
+          GLCD.CursorTo(11, 3);
+          sprintf(debugStr, "V: %.1f",volts);
+          GLCD.print("V: ");
+          GLCD.print(volts);
+          break;
           
         case MAVLINK_MSG_ID_HEARTBEAT:
           mavlink_heartbeat_t hb;
           mavlink_msg_heartbeat_decode(msg, &hb);
-          pulseLed(COL_RED, 100);
+          pulseLed(COL_GREEN, 100);
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
           SerialUSB.println(debugStr);
           GLCD.CursorTo(0,5);
@@ -150,7 +164,6 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
             GLCD.print("           ");
           }
           GLCD.display();
-          
           break;
 
         case MAVLINK_MSG_ID_GPS_RAW_INT:
