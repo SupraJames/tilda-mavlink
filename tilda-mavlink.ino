@@ -15,9 +15,16 @@
 #define LED1_GREEN (39u)
 #define LED1_RED (41u)
 
+#define COL_RED 1
+#define COL_GREEN 2
+#define COL_BLUE 3
+
 #include "C:\Users\jamesp\Documents\Arduino\libraries\mavlink\common\mavlink.h"        // Mavlink interface
 
 char debugStr[100];
+int led1State = LOW;
+unsigned long led1pMillis;
+unsigned long led1Interval;
 
 void setup() {
   pinMode(LED1_RED, OUTPUT);
@@ -40,6 +47,8 @@ void setup() {
   GLCD.Init(NON_INVERTED); 
   GLCD.SelectFont(System5x7);
   GLCD.print("MavLink Decode v0.1");
+  GLCD.CursorTo(0,2);
+  GLCD.print("Waiting for UAV");
   GLCD.display();
   SerialUSB.println("Opening Radio Dongle");
   Serial1.begin(57600);
@@ -49,6 +58,33 @@ void setup() {
 
 void loop() {
   comm_receive();
+  update_led();
+}
+
+void pulseLed(int colour, long interval) {
+  led1State = HIGH;
+  led1Interval = interval;
+  switch (colour) {
+    case COL_RED:
+      setColor(150, 0, 0);
+      break;
+    case COL_GREEN:
+      setColor(0, 150, 0);
+      break;
+    case COL_BLUE:
+      setColor(0, 0, 150);
+      break;
+  }
+  led1pMillis = millis();
+}
+
+void update_led() {
+  // Check if we need to turn the LED off, based on interval and current time
+  unsigned long currentMillis = millis();
+  if ((led1State == HIGH) && (currentMillis - led1pMillis >= led1Interval)) {
+    led1State = LOW;
+    setColor(0, 0, 0);
+  }
 }
 
 void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
@@ -61,7 +97,7 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           GLCD.CursorTo(0, 2);
           GLCD.print("Alt: ");
           GLCD.print(mavlink_msg_vfr_hud_get_alt(msg));
-          GLCD.print("m   ");
+          GLCD.print("m\n");
           GLCD.CursorTo(0, 3);
           GLCD.print("Hdg: ");
           heading = mavlink_msg_vfr_hud_get_heading(msg);
@@ -73,7 +109,7 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
         case MAVLINK_MSG_ID_HEARTBEAT:
           mavlink_heartbeat_t hb;
           mavlink_msg_heartbeat_decode(msg, &hb);
-
+          pulseLed(COL_RED, 100);
           //tone(DAC0,750,100);
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
           SerialUSB.println(debugStr);
@@ -84,6 +120,12 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           } else {
             SerialUSB.println("DISARMED");
             GLCD.print("DISARMED");
+          }
+          if (hb.base_mode & MAV_MODE_FLAG_DECODE_POSITION_GUIDED) {
+            SerialUSB.println("AUTO MODE");
+            GLCD.print(" AP ENGAGE ");
+          } else {
+            GLCD.print("           ");
           }
           GLCD.display();
           
