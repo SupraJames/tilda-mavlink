@@ -11,9 +11,16 @@
 #define LCD_POWER (40u)
 #define LCD_BACKLIGHT (35u)
 
+#define LED1_BLUE (37u)
+#define LED1_GREEN (39u)
+#define LED1_RED (41u)
+
 #include "C:\Users\jamesp\Documents\Arduino\libraries\mavlink\common\mavlink.h"        // Mavlink interface
 
 void setup() {
+  pinMode(LED1_RED, OUTPUT);
+  pinMode(LED1_GREEN, OUTPUT);
+  pinMode(LED1_BLUE, OUTPUT); 
   SerialUSB.begin(57600);
   delay(3000); 
   //while (!SerialUSB) {
@@ -35,6 +42,7 @@ void setup() {
   SerialUSB.println("Opening Radio Dongle");
   Serial1.begin(57600);
   tone(DAC0,262,500);
+  setColor(0, 150, 0); // green
 }
 
 void loop() {
@@ -168,5 +176,11 @@ void TC3_Handler ( void ) {
   }
 }
 
+void setColor(int red, int green, int blue)
+{
+ analogWrite(LED1_RED, 255-red);
+ analogWrite(LED1_GREEN, 255-green);
+ analogWrite(LED1_BLUE, 255-blue); 
+}
 
 
