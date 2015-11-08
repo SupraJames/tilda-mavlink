@@ -9,7 +9,9 @@ I'm afraid there is not much here yet :)
 Currently, the following messages are decoded:
 
 MAVLINK_MSG_ID_HEARTBEAT for system status
+
 MAVLINK_MSG_ID_VFR_HUD for Alt, Speed, Heading, Course etc
+
 MAVLINK_MSG_ID_GPS_RAW_INT for GPS data
 
 This small project is based on the Tilda MKE, an Arduino Due like board with an LCD, from EMF Camp 2014
