@@ -34,6 +34,7 @@ void setup() {
   GLCD.display();
   SerialUSB.println("Opening Radio Dongle");
   Serial1.begin(57600);
+  tone(DAC0,262,500);
 }
 
 void loop() {
@@ -56,8 +57,9 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
         case MAVLINK_MSG_ID_HEARTBEAT:
           mavlink_heartbeat_t hb;
           mavlink_msg_heartbeat_decode(msg, &hb);
-
           char debugStr[100];
+
+          tone(DAC0,750,100);
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
           SerialUSB.println(debugStr);
           break;
@@ -88,7 +90,83 @@ void comm_receive() {
     // And get the next one
   }
 }
-       
-       
-       
+
+/*
+Tone generator
+v1  use timer, and toggle any digital pin in ISR
+   funky duration from arduino version
+   TODO use FindMckDivisor?
+   timer selected will preclude using associated pins for PWM etc.
+    could also do timer/pwm hardware toggle where caller controls duration
+*/
+
+// frequency (in hertz) and duration (in milliseconds).
+
+// timers TC0 TC1 TC2   channels 0-2 ids 0-2  3-5  6-8     AB 0 1
+// use TC1 channel 0 
+#define TONE_TIMER TC1
+#define TONE_CHNL 0
+#define TONE_IRQ TC3_IRQn
+
+// TIMER_CLOCK4   84MHz/128 with 16 bit counter give 10 Hz to 656KHz
+//  piano 27Hz to 4KHz
+
+static uint8_t pinEnabled[PINS_COUNT];
+static uint8_t TCChanEnabled = 0;
+static boolean pin_state = false ;
+static Tc *chTC = TONE_TIMER;
+static uint32_t chNo = TONE_CHNL;
+
+volatile static int32_t toggle_count;
+static uint32_t tone_pin;
+
+void tone(uint32_t ulPin, uint32_t frequency, int32_t duration)
+{
+    const uint32_t rc = VARIANT_MCK / 256 / frequency; 
+    tone_pin = ulPin;
+    toggle_count = 0;  // strange  wipe out previous duration
+    if (duration > 0 ) toggle_count = 2 * frequency * duration / 1000;
+     else toggle_count = -1;
+
+    if (!TCChanEnabled) {
+      pmc_set_writeprotect(false);
+      pmc_enable_periph_clk((uint32_t)TONE_IRQ);
+      TC_Configure(chTC, chNo,
+        TC_CMR_TCCLKS_TIMER_CLOCK4 |
+        TC_CMR_WAVE |         // Waveform mode
+        TC_CMR_WAVSEL_UP_RC ); // Counter running up and reset when equals to RC
+  
+      chTC->TC_CHANNEL[chNo].TC_IER=TC_IER_CPCS;  // RC compare interrupt
+      chTC->TC_CHANNEL[chNo].TC_IDR=~TC_IER_CPCS;
+       NVIC_EnableIRQ(TONE_IRQ);
+                         TCChanEnabled = 1;
+    }
+    if (!pinEnabled[ulPin]) {
+      pinMode(ulPin, OUTPUT);
+      pinEnabled[ulPin] = 1;
+    }
+    TC_Stop(chTC, chNo);
+                TC_SetRC(chTC, chNo, rc);    // set frequency
+    TC_Start(chTC, chNo);
+}
+
+void noTone(uint32_t ulPin)
+{
+  TC_Stop(chTC, chNo);  // stop timer
+  digitalWrite(ulPin,LOW);  // no signal on pin
+}
+
+// timer ISR  TC1 ch 0
+void TC3_Handler ( void ) {
+  TC_GetStatus(TC1, 0);
+  if (toggle_count != 0){
+    // toggle pin  TODO  better
+    digitalWrite(tone_pin,pin_state= !pin_state);
+    if (toggle_count > 0) toggle_count--;
+  } else {
+    noTone(tone_pin);
+  }
+}
+
+
 
