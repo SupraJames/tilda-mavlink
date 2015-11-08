@@ -58,10 +58,11 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           int heading;
           SerialUSB.print("Got a HUD message! Alt=");
           SerialUSB.println(mavlink_msg_vfr_hud_get_alt(msg));
-          GLCD.CursorTo(0, 1);
+          GLCD.CursorTo(0, 2);
           GLCD.print("Alt: ");
           GLCD.print(mavlink_msg_vfr_hud_get_alt(msg));
-          GLCD.CursorTo(0, 2);
+          GLCD.print("m   ");
+          GLCD.CursorTo(0, 3);
           GLCD.print("Hdg: ");
           heading = mavlink_msg_vfr_hud_get_heading(msg);
           sprintf(debugStr, "%03d",heading);
@@ -76,6 +77,16 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           //tone(DAC0,750,100);
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
           SerialUSB.println(debugStr);
+          GLCD.CursorTo(0,5);
+          if (hb.base_mode & MAV_MODE_FLAG_DECODE_POSITION_SAFETY) {
+            SerialUSB.println("ARMED");
+            GLCD.print("ARMED   ");
+          } else {
+            SerialUSB.println("DISARMED");
+            GLCD.print("DISARMED");
+          }
+          GLCD.display();
+          
           break;
 
         case MAVLINK_MSG_ID_GPS_RAW_INT:
