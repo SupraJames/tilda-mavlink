@@ -55,16 +55,17 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
   switch(msg->msgid)
       {
         case MAVLINK_MSG_ID_VFR_HUD:
+          int heading;
           SerialUSB.print("Got a HUD message! Alt=");
           SerialUSB.println(mavlink_msg_vfr_hud_get_alt(msg));
           GLCD.CursorTo(0, 1);
           GLCD.print("Alt: ");
-          //GLCD.CursorTo(6, 1);
           GLCD.print(mavlink_msg_vfr_hud_get_alt(msg));
           GLCD.CursorTo(0, 2);
           GLCD.print("Hdg: ");
-         // GLCD.CursorTo(6, 2);
-          GLCD.print(mavlink_msg_vfr_hud_get_heading(msg));
+          heading = mavlink_msg_vfr_hud_get_heading(msg);
+          sprintf(debugStr, "%03d",heading);
+          GLCD.print(debugStr);
           GLCD.display();
           break;
           
@@ -72,7 +73,7 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           mavlink_heartbeat_t hb;
           mavlink_msg_heartbeat_decode(msg, &hb);
 
-          tone(DAC0,750,100);
+          //tone(DAC0,750,100);
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
           SerialUSB.println(debugStr);
           break;
@@ -82,10 +83,23 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           mavlink_gps_raw_int_t gps_raw;
           mavlink_msg_gps_raw_int_decode(msg, &gps_raw);
           SerialUSB.println(gps_raw.satellites_visible);
-          GLCD.CursorTo(0,3);
-          GLCD.print("Sat: ");
-          GLCD.print(gps_raw.satellites_visible);
-          GLCD.display();
+          if (gps_raw.fix_type > 1) {
+            GLCD.CursorTo(0,7);
+            GLCD.print("Sat: ");
+            GLCD.print(gps_raw.satellites_visible);
+            GLCD.print(" HDOP: ");
+            GLCD.print(gps_raw.eph);
+            GLCD.print("cm");
+            GLCD.CursorTo(19, 7);
+            if (gps_raw.fix_type == 2)
+              GLCD.print("2D");
+            if (gps_raw.fix_type == 3)
+              GLCD.print("3D");
+            GLCD.display();
+          } else {
+            GLCD.CursorTo(0,7);
+            GLCD.print("No GPS fix           ");
+          }
           break;
           
         default:
