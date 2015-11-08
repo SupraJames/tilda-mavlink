@@ -10,10 +10,16 @@
 #include <fonts/allFonts.h>
 #define LCD_POWER (40u)
 #define LCD_BACKLIGHT (35u)
+#define VBATT_MON A11
+#define MCP_STAT (62u)
 
 #define LED1_BLUE (37u)
 #define LED1_GREEN (39u)
 #define LED1_RED (41u)
+
+#define LED2_BLUE (82u)
+#define LED2_GREEN (44u)
+#define LED2_RED (45u)
 
 #define COL_RED 1
 #define COL_GREEN 2
@@ -53,12 +59,29 @@ void setup() {
   SerialUSB.println("Opening Radio Dongle");
   Serial1.begin(57600);
   tone(DAC0,262,500);
-  //setColor(0, 150, 0); // green
+  int batteryReading = analogRead(VBATT_MON);
+  int chargeState = digitalRead(MCP_STAT);
+  float batteryVoltage = batteryReading * (3.3 / 512);
+  sprintf(debugStr, "LOCAL BATTERY %d (%f volts) CHARGE STATE %d",batteryReading, batteryVoltage, chargeState);
+  SerialUSB.println(debugStr);
+  attachInterrupt(MCP_STAT, ChargeStateInterrupt, CHANGE);
 }
 
 void loop() {
   comm_receive();
   update_led();
+  check_power();
+}
+
+void ChargeStateInterrupt() {
+  int chargeState = digitalRead(MCP_STAT);
+  if (chargeState)
+    setColor(2,0,0,0);
+  else
+    setColor(2,255,0,0);
+}
+
+void check_power() {
 }
 
 void pulseLed(int colour, long interval) {
@@ -66,13 +89,13 @@ void pulseLed(int colour, long interval) {
   led1Interval = interval;
   switch (colour) {
     case COL_RED:
-      setColor(150, 0, 0);
+      setColor(1, 150, 0, 0);
       break;
     case COL_GREEN:
-      setColor(0, 150, 0);
+      setColor(1, 0, 150, 0);
       break;
     case COL_BLUE:
-      setColor(0, 0, 150);
+      setColor(1, 0, 0, 150);
       break;
   }
   led1pMillis = millis();
@@ -83,7 +106,7 @@ void update_led() {
   unsigned long currentMillis = millis();
   if ((led1State == HIGH) && (currentMillis - led1pMillis >= led1Interval)) {
     led1State = LOW;
-    setColor(0, 0, 0);
+    setColor(1, 0, 0, 0);
   }
 }
 
@@ -110,7 +133,6 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           mavlink_heartbeat_t hb;
           mavlink_msg_heartbeat_decode(msg, &hb);
           pulseLed(COL_RED, 100);
-          //tone(DAC0,750,100);
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
           SerialUSB.println(debugStr);
           GLCD.CursorTo(0,5);
@@ -259,11 +281,20 @@ void TC3_Handler ( void ) {
   }
 }
 
-void setColor(int red, int green, int blue)
+void setColor(int led, int red, int green, int blue)
 {
- analogWrite(LED1_RED, 255-red);
- analogWrite(LED1_GREEN, 255-green);
- analogWrite(LED1_BLUE, 255-blue); 
+ switch (led) {
+   case 1:
+     analogWrite(LED1_RED, 255-red);
+     analogWrite(LED1_GREEN, 255-green);
+     analogWrite(LED1_BLUE, 255-blue); 
+     break;
+   case 2:
+     analogWrite(LED2_RED, 255-red);
+     analogWrite(LED2_GREEN, 255-green);
+     analogWrite(LED2_BLUE, 255-blue);
+     break;
+ }
 }
 
 
