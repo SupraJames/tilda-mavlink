@@ -40,35 +40,22 @@ void loop() {
   comm_receive();
 }
 
-void comm_receive() {
- 
-  mavlink_message_t msg;
-  mavlink_status_t status;
- 
-  while(Serial1.available() > 0 ) 
-  {
-    // Serial.println("reading message");
-    uint8_t c = Serial1.read();
-    //SerialUSB.print(c,HEX);
-    //SerialUSB.print(" ");
-    // Try to get a new message
-    if(mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status)) {
-      //SerialUSB.println("END");
-      switch(msg.msgid)
+void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
+  switch(msg->msgid)
       {
         case MAVLINK_MSG_ID_VFR_HUD:
           SerialUSB.print("Got a HUD message! Alt=");
-          SerialUSB.println(mavlink_msg_vfr_hud_get_alt(&msg));
+          SerialUSB.println(mavlink_msg_vfr_hud_get_alt(msg));
           GLCD.CursorTo(0, 1);
           GLCD.print("Alt: ");
           GLCD.CursorTo(6, 1);
-          GLCD.print(mavlink_msg_vfr_hud_get_alt(&msg));
+          GLCD.print(mavlink_msg_vfr_hud_get_alt(msg));
           GLCD.display();
           break;
           
         case MAVLINK_MSG_ID_HEARTBEAT:
           mavlink_heartbeat_t hb;
-          mavlink_msg_heartbeat_decode(&msg, &hb);
+          mavlink_msg_heartbeat_decode(msg, &hb);
 
           char debugStr[100];
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
@@ -79,6 +66,24 @@ void comm_receive() {
          // Serial.println("Unknown msg");
           break;
       }
+}
+
+void comm_receive() {
+
+  mavlink_message_t msg;
+  mavlink_status_t status;
+  
+  while(Serial1.available() > 0 ) 
+  {
+    // Serial.println("reading message");
+    uint8_t c = Serial1.read();
+    //SerialUSB.print(c,HEX);
+    //SerialUSB.print(" ");
+    // Try to get a new message
+    if(mavlink_parse_char(MAVLINK_COMM_0, c, &msg, &status)) {
+      //SerialUSB.println("END");
+      handle_message(&msg, &status);
+      
     }
     // And get the next one
   }
