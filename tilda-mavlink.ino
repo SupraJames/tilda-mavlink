@@ -17,6 +17,8 @@
 
 #include "C:\Users\jamesp\Documents\Arduino\libraries\mavlink\common\mavlink.h"        // Mavlink interface
 
+char debugStr[100];
+
 void setup() {
   pinMode(LED1_RED, OUTPUT);
   pinMode(LED1_GREEN, OUTPUT);
@@ -42,7 +44,7 @@ void setup() {
   SerialUSB.println("Opening Radio Dongle");
   Serial1.begin(57600);
   tone(DAC0,262,500);
-  setColor(0, 150, 0); // green
+  //setColor(0, 150, 0); // green
 }
 
 void loop() {
@@ -57,19 +59,33 @@ void handle_message(mavlink_message_t *msg, mavlink_status_t *status) {
           SerialUSB.println(mavlink_msg_vfr_hud_get_alt(msg));
           GLCD.CursorTo(0, 1);
           GLCD.print("Alt: ");
-          GLCD.CursorTo(6, 1);
+          //GLCD.CursorTo(6, 1);
           GLCD.print(mavlink_msg_vfr_hud_get_alt(msg));
+          GLCD.CursorTo(0, 2);
+          GLCD.print("Hdg: ");
+         // GLCD.CursorTo(6, 2);
+          GLCD.print(mavlink_msg_vfr_hud_get_heading(msg));
           GLCD.display();
           break;
           
         case MAVLINK_MSG_ID_HEARTBEAT:
           mavlink_heartbeat_t hb;
           mavlink_msg_heartbeat_decode(msg, &hb);
-          char debugStr[100];
 
           tone(DAC0,750,100);
           sprintf(debugStr, "HEARTBEAT: AP %x BM: %x: SS: %x MV: %x",hb.autopilot,hb.base_mode,hb.system_status,hb.mavlink_version);
           SerialUSB.println(debugStr);
+          break;
+
+        case MAVLINK_MSG_ID_GPS_RAW_INT:
+          SerialUSB.print("Got a GPS message! nsats=");
+          mavlink_gps_raw_int_t gps_raw;
+          mavlink_msg_gps_raw_int_decode(msg, &gps_raw);
+          SerialUSB.println(gps_raw.satellites_visible);
+          GLCD.CursorTo(0,3);
+          GLCD.print("Sat: ");
+          GLCD.print(gps_raw.satellites_visible);
+          GLCD.display();
           break;
           
         default:
